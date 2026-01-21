@@ -11,6 +11,12 @@ function Scanner() {
   const [modo, setModo] = useState("VENTA") 
   const navigate = useNavigate()
   
+  // Estados para el modal de confirmación
+  const [mostrarModal, setMostrarModal] = useState(false)
+  const [productoEscaneado, setProductoEscaneado] = useState(null)
+  const [cantidadInput, setCantidadInput] = useState(1)
+  const [procesando, setProcesando] = useState(false)
+  
   // ⚠️ TU URL DE RENDER
   const API_URL = "https://api-saltenas.onrender.com" 
 
@@ -25,7 +31,7 @@ function Scanner() {
 
   // --- CONFIGURACIÓN DEL ESCÁNER ---
   useEffect(() => {
-    if (!scanResult) {
+    if (!scanResult && !mostrarModal) {
       const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
       scanner.render(onScanSuccess, (err) => {});
       
@@ -36,7 +42,7 @@ function Scanner() {
       
       return () => { scanner.clear().catch(e => console.error(e)); }
     }
-  }, [scanResult, modo, productos]) 
+  }, [scanResult, modo, productos, mostrarModal]) 
 
   const obtenerInventario = async () => {
     try {
@@ -47,8 +53,6 @@ function Scanner() {
   }
 
   const manejarLectura = async (nombre) => {
-    setScanResult(`Procesando ${nombre}...`)
-    
     const productoInfo = productos.find(p => p.nombre.toLowerCase() === nombre.toLowerCase())
     
     if (!productoInfo) {
@@ -57,38 +61,65 @@ function Scanner() {
       return
     }
 
-    // --- LÓGICA DE UNIDADES (Bandeja vs Bolsa) ---
-    let cantidad = 0
+    // Abrir modal con el producto escaneado
+    setProductoEscaneado(productoInfo)
+    setCantidadInput(1) // Por defecto 1 unidad (bandeja o bolsa)
+    setMostrarModal(true)
+    setScanResult(`Producto detectado: ${nombre}`)
+  }
+
+  const confirmarMovimiento = async () => {
+    if (!productoEscaneado || cantidadInput <= 0) {
+      alert("⚠️ La cantidad debe ser mayor a 0")
+      return
+    }
+
+    setProcesando(true)
+
+    // Calcular las unidades totales según el modo
+    let unidadesTotales = 0
     let unidadTexto = ""
 
     if (modo === "PRODUCCION") {
-      // ENTRADA: Usamos reglas de BANDEJA
-      // Si no tiene regla configurada, asume 30 por defecto
-      cantidad = productoInfo.unidades_por_bandeja || 30 
-      unidadTexto = "1 Bandeja"
+      // ENTRADA: Bandejas
+      const unidadesPorBandeja = productoEscaneado.unidades_por_bandeja || 30
+      unidadesTotales = cantidadInput * unidadesPorBandeja
+      unidadTexto = `${cantidadInput} Bandeja${cantidadInput > 1 ? 's' : ''}`
     } else {
-      // SALIDA: Usamos reglas de BOLSA (Negativo)
-      // Si no tiene regla configurada, asume 10 por defecto
-      cantidad = -(productoInfo.unidades_por_bolsa || 10) 
-      unidadTexto = "1 Bolsa"
+      // SALIDA: Bolsas (negativo)
+      const unidadesPorBolsa = productoEscaneado.unidades_por_bolsa || 10
+      unidadesTotales = -(cantidadInput * unidadesPorBolsa)
+      unidadTexto = `${cantidadInput} Bolsa${cantidadInput > 1 ? 's' : ''}`
     }
 
     try {
       await axios.post(`${API_URL}/registrar-movimiento`, {
-        producto_nombre: productoInfo.nombre,
-        cantidad: cantidad, 
+        producto_nombre: productoEscaneado.nombre,
+        cantidad: unidadesTotales, 
         tipo: modo
       })
       
       const accion = modo === "VENTA" ? "Salida" : "Entrada";
-      alert(`✅ ${accion}: ${unidadTexto} de ${productoInfo.nombre}\n(${Math.abs(cantidad)} unidades registradas)`)
+      alert(`✅ ${accion} registrada:\n${unidadTexto} de ${productoEscaneado.nombre}\n(${Math.abs(unidadesTotales)} unidades)`)
       
-      setScanResult(null)
+      cerrarModal()
       obtenerInventario() 
     } catch (error) {
       alert("❌ Error de red o servidor.")
-      setScanResult(null)
+      setProcesando(false)
     }
+  }
+
+  const cancelarMovimiento = () => {
+    cerrarModal()
+  }
+
+  const cerrarModal = () => {
+    setMostrarModal(false)
+    setProductoEscaneado(null)
+    setCantidadInput(1)
+    setScanResult(null)
+    setProcesando(false)
   }
 
   return (
@@ -144,6 +175,181 @@ function Scanner() {
 
       {/* CÁMARA */}
       <div id="reader" style={{borderRadius: '10px', overflow: 'hidden', border: '2px solid #ddd'}}></div>
+
+      {/* MODAL DE CONFIRMACIÓN */}
+      {mostrarModal && productoEscaneado && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '30px',
+            maxWidth: '400px',
+            width: '100%',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+            animation: 'slideIn 0.3s ease-out'
+          }}>
+            {/* Header del Modal */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '25px',
+              paddingBottom: '20px',
+              borderBottom: '2px solid #f0f0f0'
+            }}>
+              <div style={{
+                fontSize: '48px',
+                marginBottom: '10px'
+              }}>
+                {modo === "PRODUCCION" ? "🏭" : "💰"}
+              </div>
+              <h2 style={{
+                margin: '0 0 8px 0',
+                color: '#333',
+                fontSize: '24px'
+              }}>
+                {productoEscaneado.nombre}
+              </h2>
+              <p style={{
+                margin: 0,
+                color: '#666',
+                fontSize: '14px'
+              }}>
+                {modo === "PRODUCCION" ? "Entrada de Producción" : "Salida de Venta"}
+              </p>
+            </div>
+
+            {/* Información del Producto */}
+            <div style={{
+              backgroundColor: '#f8f9fa',
+              padding: '15px',
+              borderRadius: '10px',
+              marginBottom: '20px'
+            }}>
+              <div style={{fontSize: '13px', color: '#666', marginBottom: '8px'}}>
+                Stock actual: <strong style={{color: '#333', fontSize: '16px'}}>{productoEscaneado.stock_actual}</strong> unidades
+              </div>
+              <div style={{fontSize: '13px', color: '#666'}}>
+                {modo === "PRODUCCION" 
+                  ? `📦 Unidades por bandeja: ${productoEscaneado.unidades_por_bandeja || 30}`
+                  : `🛍️ Unidades por bolsa: ${productoEscaneado.unidades_por_bolsa || 10}`
+                }
+              </div>
+            </div>
+
+            {/* Input de Cantidad */}
+            <div style={{marginBottom: '25px'}}>
+              <label style={{
+                display: 'block',
+                marginBottom: '10px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                color: '#333'
+              }}>
+                Cantidad de {modo === "PRODUCCION" ? "Bandejas" : "Bolsas"}:
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={cantidadInput}
+                onChange={(e) => setCantidadInput(parseInt(e.target.value) || 1)}
+                disabled={procesando}
+                style={{
+                  width: '100%',
+                  padding: '15px',
+                  fontSize: '20px',
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  border: '2px solid #ddd',
+                  borderRadius: '10px',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={(e) => e.target.style.borderColor = modo === "PRODUCCION" ? '#4CAF50' : '#f44336'}
+                onBlur={(e) => e.target.style.borderColor = '#ddd'}
+                autoFocus
+              />
+              
+              {/* Vista previa del cálculo */}
+              <div style={{
+                marginTop: '12px',
+                padding: '12px',
+                backgroundColor: modo === "PRODUCCION" ? '#e8f5e9' : '#ffebee',
+                borderRadius: '8px',
+                textAlign: 'center',
+                fontSize: '14px',
+                color: '#333'
+              }}>
+                {modo === "PRODUCCION" 
+                  ? `= ${cantidadInput * (productoEscaneado.unidades_por_bandeja || 30)} unidades a agregar`
+                  : `= ${cantidadInput * (productoEscaneado.unidades_por_bolsa || 10)} unidades a restar`
+                }
+              </div>
+            </div>
+
+            {/* Botones de Acción */}
+            <div style={{
+              display: 'flex',
+              gap: '12px'
+            }}>
+              <button
+                onClick={cancelarMovimiento}
+                disabled={procesando}
+                style={{
+                  flex: 1,
+                  padding: '15px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  border: '2px solid #ddd',
+                  borderRadius: '10px',
+                  backgroundColor: 'white',
+                  color: '#666',
+                  cursor: procesando ? 'not-allowed' : 'pointer',
+                  opacity: procesando ? 0.5 : 1,
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => !procesando && (e.target.style.backgroundColor = '#f5f5f5')}
+                onMouseOut={(e) => !procesando && (e.target.style.backgroundColor = 'white')}
+              >
+                ✖️ Cancelar
+              </button>
+              
+              <button
+                onClick={confirmarMovimiento}
+                disabled={procesando || cantidadInput <= 0}
+                style={{
+                  flex: 1,
+                  padding: '15px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  borderRadius: '10px',
+                  backgroundColor: procesando ? '#ccc' : (modo === "PRODUCCION" ? '#4CAF50' : '#f44336'),
+                  color: 'white',
+                  cursor: procesando ? 'not-allowed' : 'pointer',
+                  boxShadow: procesando ? 'none' : '0 4px 12px rgba(0,0,0,0.15)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => !procesando && (e.target.style.transform = 'translateY(-2px)')}
+                onMouseOut={(e) => !procesando && (e.target.style.transform = 'translateY(0)')}
+              >
+                {procesando ? '⏳ Procesando...' : '✔️ Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* LISTA DE STOCK */}
       <h4 style={{marginTop: '20px', marginBottom: '10px', color: '#444'}}>📦 Inventario Actual (Unidades)</h4>
