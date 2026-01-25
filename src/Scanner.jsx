@@ -44,21 +44,12 @@ function Scanner() {
     obtenerInventario()
   }, [])
 
-  // --- INICIALIZACIÓN DEL ESCÁNER ---
-  useEffect(() => {
-    const qrCode = new Html5Qrcode("reader");
-    setHtml5QrCode(qrCode);
-    
-    return () => {
-      if (qrCode.isScanning) {
-        qrCode.stop().catch(err => console.log(err));
-      }
-    };
-  }, []);
-
   // --- INICIAR SCANNER ---
   const iniciarScanner = async () => {
-    if (!html5QrCode || scannerIniciado) return;
+    if (scannerIniciado) return;
+    
+    // Crear el scanner justo antes de usarlo (cuando el DOM ya existe)
+    const qrCode = new Html5Qrcode("reader");
     
     try {
       // Configuración básica
@@ -69,12 +60,12 @@ function Scanner() {
       
       // Intentar iniciar con facingMode primero (mejor para móviles)
       try {
-        await html5QrCode.start(
+        await qrCode.start(
           { facingMode: "environment" }, // Cámara trasera
           config,
           (decodedText) => {
             // Detener scanner y procesar QR
-            html5QrCode.pause(true);
+            qrCode.pause(true);
             manejarLectura(decodedText);
           },
           (errorMessage) => {
@@ -82,6 +73,7 @@ function Scanner() {
           }
         );
         
+        setHtml5QrCode(qrCode);
         setScannerIniciado(true);
         console.log("✅ Scanner iniciado con facingMode");
       } catch (facingModeError) {
@@ -107,11 +99,11 @@ function Scanner() {
             camaraId = devices[devices.length - 1].id;
           }
           
-          await html5QrCode.start(
+          await qrCode.start(
             camaraId,
             config,
             (decodedText) => {
-              html5QrCode.pause(true);
+              qrCode.pause(true);
               manejarLectura(decodedText);
             },
             (errorMessage) => {
@@ -119,6 +111,7 @@ function Scanner() {
             }
           );
           
+          setHtml5QrCode(qrCode);
           setScannerIniciado(true);
           console.log("✅ Scanner iniciado con deviceId:", camaraId);
         } else {
