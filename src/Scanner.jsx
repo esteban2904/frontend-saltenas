@@ -58,70 +58,100 @@ function Scanner() {
         qrbox: { width: 250, height: 250 }
       };
       
-      // Intentar iniciar con facingMode primero (mejor para móviles)
+      const onScanSuccess = (decodedText) => {
+        qrCode.pause(true);
+        manejarLectura(decodedText);
+      };
+      
+      const onScanError = (errorMessage) => {
+        // Errores de escaneo (ignorar - son muy frecuentes)
+      };
+      
+      // Primero obtener todas las cámaras disponibles
+      let devices = [];
       try {
-        await qrCode.start(
-          { facingMode: "environment" }, // Cámara trasera
-          config,
-          (decodedText) => {
-            // Detener scanner y procesar QR
-            qrCode.pause(true);
-            manejarLectura(decodedText);
-          },
-          (errorMessage) => {
-            // Errores de escaneo (ignorar - son muy frecuentes)
-          }
-        );
-        
-        setHtml5QrCode(qrCode);
-        setScannerIniciado(true);
-        console.log("✅ Scanner iniciado con facingMode");
-      } catch (facingModeError) {
-        // Si facingMode falla, intentar con deviceId (escritorio)
-        console.log("⚠️ FacingMode falló, intentando con deviceId...", facingModeError);
-        
-        const devices = await Html5Qrcode.getCameras();
-        
-        if (devices && devices.length > 0) {
-          // Buscar la cámara trasera
-          let camaraId = devices[0].id;
-          
-          const camaraTrasera = devices.find(device => 
-            device.label.toLowerCase().includes('back') || 
-            device.label.toLowerCase().includes('rear') ||
-            device.label.toLowerCase().includes('trasera') ||
-            device.label.toLowerCase().includes('environment')
-          );
-          
-          if (camaraTrasera) {
-            camaraId = camaraTrasera.id;
-          } else if (devices.length > 1) {
-            camaraId = devices[devices.length - 1].id;
-          }
-          
+        devices = await Html5Qrcode.getCameras();
+        console.log("📹 Cámaras encontradas:", devices.length);
+      } catch (err) {
+        console.log("⚠️ No se pudieron enumerar las cámaras:", err);
+      }
+      
+      // Estrategia 1: Intentar con facingMode (mejor para móviles)
+      if (devices.length === 0) {
+        try {
+          console.log("Intentando con facingMode...");
           await qrCode.start(
-            camaraId,
+            { facingMode: "environment" },
             config,
-            (decodedText) => {
-              qrCode.pause(true);
-              manejarLectura(decodedText);
-            },
-            (errorMessage) => {
-              // Errores de escaneo (ignorar)
-            }
+            onScanSuccess,
+            onScanError
           );
           
           setHtml5QrCode(qrCode);
           setScannerIniciado(true);
-          console.log("✅ Scanner iniciado con deviceId:", camaraId);
-        } else {
-          throw new Error("No se encontraron cámaras disponibles");
+          console.log("✅ Scanner iniciado con facingMode");
+          return;
+        } catch (facingModeError) {
+          console.log("⚠️ FacingMode falló:", facingModeError.message);
         }
       }
+      
+      // Estrategia 2: Usar deviceId de las cámaras disponibles
+      if (devices.length > 0) {
+        // Buscar la cámara trasera
+        let camaraId = devices[0].id;
+        
+        const camaraTrasera = devices.find(device => 
+          device.label.toLowerCase().includes('back') || 
+          device.label.toLowerCase().includes('rear') ||
+          device.label.toLowerCase().includes('trasera') ||
+          device.label.toLowerCase().includes('environment')
+        );
+        
+        if (camaraTrasera) {
+          console.log("📹 Cámara trasera encontrada:", camaraTrasera.label);
+          camaraId = camaraTrasera.id;
+        } else if (devices.length > 1) {
+          // Si no se encuentra por nombre, usar la última (suele ser trasera)
+          console.log("📹 Usando última cámara:", devices[devices.length - 1].label);
+          camaraId = devices[devices.length - 1].id;
+        } else {
+          console.log("📹 Usando primera cámara:", devices[0].label);
+        }
+        
+        await qrCode.start(
+          camaraId,
+          config,
+          onScanSuccess,
+          onScanError
+        );
+        
+        setHtml5QrCode(qrCode);
+        setScannerIniciado(true);
+        console.log("✅ Scanner iniciado con deviceId");
+        return;
+      }
+      
+      // Si llegamos aquí, no hay cámaras
+      throw new Error("No se encontraron cámaras disponibles en el dispositivo");
+      
     } catch (err) {
       console.error("❌ Error al iniciar scanner:", err);
       setScannerIniciado(false);
-      alert(`Error al iniciar la cámara: ${err.message}\n\nVerifica que hayas dado permisos de cámara.`);
+      
+      let mensaje = "Error al iniciar la cámara.\n\n";
+      
+      if (err.name === "NotAllowedError" || err.message.includes("Permission")) {
+        mensaje += "Por favor, permite el acceso a la cámara en la configuración de tu navegador.";
+      } else if (err.name === "NotFoundError") {
+        mensaje += "No se encontró ninguna cámara en tu dispositivo.";
+      } else if (err.name === "NotReadableError") {
+        mensaje += "La cámara está siendo usada por otra aplicación.";
+      } else {
+        mensaje += err.message;
+      }
+      
+      alert(mensaje);
     }
   };
 
