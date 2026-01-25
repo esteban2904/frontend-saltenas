@@ -186,29 +186,33 @@ function Dashboard() {
   const alturaMensual = Math.max(350, keysEntrada.length * 35 + keysSalida.length * 35);
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', background: '#f4f4f4', minHeight: '100vh' }}>
+    <div style={{ padding: 'clamp(0.5rem, 3vw, 2rem)', maxWidth: '1400px', margin: '0 auto', background: '#f4f4f4', minHeight: '100vh' }}>
       
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', background: 'white', padding: '1.5rem', borderRadius: '4px', boxShadow: '0 1px 3px rgba(0,0,0,0.12)' }}>
-        <div>
-          <h1 style={{margin: 0, color: '#161616', fontSize: '2rem', fontWeight: '400'}}>Dashboard Maestro</h1>
-          <p style={{margin: '0.5rem 0 0 0', color: '#525252', fontSize: '0.875rem'}}>Control de Inventario en Tiempo Real</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <Button 
-            kind="tertiary" 
-            renderIcon={QrCode}
-            onClick={() => navigate('/scanner')}
-          >
-            Ir al Scanner
-          </Button>
-          <Button 
-            kind="danger--tertiary" 
-            renderIcon={Logout}
-            onClick={async () => { await supabase.auth.signOut(); navigate('/') }}
-          >
-            Cerrar Sesión
-          </Button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem', background: 'white', padding: '1rem', borderRadius: '4px', boxShadow: '0 1px 3px rgba(0,0,0,0.12)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div>
+            <h1 style={{margin: 0, color: '#161616', fontSize: 'clamp(1.25rem, 5vw, 2rem)', fontWeight: '400'}}>Dashboard Maestro</h1>
+            <p style={{margin: '0.25rem 0 0 0', color: '#525252', fontSize: '0.75rem'}}>Control de Inventario en Tiempo Real</p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <Button 
+              kind="tertiary" 
+              size="sm"
+              renderIcon={QrCode}
+              onClick={() => navigate('/scanner')}
+            >
+              <span style={{display: window.innerWidth < 600 ? 'none' : 'inline'}}>Scanner</span>
+            </Button>
+            <Button 
+              kind="danger--tertiary" 
+              size="sm"
+              renderIcon={Logout}
+              onClick={async () => { await supabase.auth.signOut(); navigate('/') }}
+            >
+              <span style={{display: window.innerWidth < 600 ? 'none' : 'inline'}}>Salir</span>
+            </Button>
+          </div>
         </div>
       </div>
 

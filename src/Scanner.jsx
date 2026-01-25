@@ -61,51 +61,73 @@ function Scanner() {
     if (!html5QrCode || scannerIniciado) return;
     
     try {
-      // Obtener todas las cámaras
-      const devices = await Html5Qrcode.getCameras();
-      
-      if (devices && devices.length > 0) {
-        // Buscar la cámara trasera (environment)
-        let camaraId = devices[0].id;
-        
-        // Intentar encontrar la cámara trasera
-        const camaraTrasera = devices.find(device => 
-          device.label.toLowerCase().includes('back') || 
-          device.label.toLowerCase().includes('rear') ||
-          device.label.toLowerCase().includes('trasera') ||
-          device.label.toLowerCase().includes('environment')
-        );
-        
-        if (camaraTrasera) {
-          camaraId = camaraTrasera.id;
-        } else if (devices.length > 1) {
-          // Si hay más de una cámara y no encontramos "back", usar la segunda (generalmente es la trasera)
-          camaraId = devices[devices.length - 1].id;
+      // Configuración para usar facingMode (mejor compatibilidad móvil)
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+        videoConstraints: {
+          facingMode: { ideal: "environment" } // Cámara trasera
         }
-        
-        // Iniciar el scanner con la cámara seleccionada
+      };
+      
+      // Intentar iniciar con facingMode primero (mejor para móviles)
+      try {
         await html5QrCode.start(
-          camaraId,
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0
-          },
+          { facingMode: "environment" },
+          config,
           (decodedText) => {
             // Detener scanner y procesar QR
             html5QrCode.pause(true);
             manejarLectura(decodedText);
           },
           (errorMessage) => {
-            // Errores de escaneo (ignorar)
+            // Errores de escaneo (ignorar - son muy frecuentes)
           }
         );
         
         setScannerIniciado(true);
+      } catch (facingModeError) {
+        // Si facingMode falla, intentar con deviceId (escritorio)
+        console.log("FacingMode no soportado, intentando con deviceId...");
+        
+        const devices = await Html5Qrcode.getCameras();
+        
+        if (devices && devices.length > 0) {
+          // Buscar la cámara trasera
+          let camaraId = devices[0].id;
+          
+          const camaraTrasera = devices.find(device => 
+            device.label.toLowerCase().includes('back') || 
+            device.label.toLowerCase().includes('rear') ||
+            device.label.toLowerCase().includes('trasera') ||
+            device.label.toLowerCase().includes('environment')
+          );
+          
+          if (camaraTrasera) {
+            camaraId = camaraTrasera.id;
+          } else if (devices.length > 1) {
+            camaraId = devices[devices.length - 1].id;
+          }
+          
+          await html5QrCode.start(
+            camaraId,
+            config,
+            (decodedText) => {
+              html5QrCode.pause(true);
+              manejarLectura(decodedText);
+            },
+            (errorMessage) => {
+              // Errores de escaneo (ignorar)
+            }
+          );
+          
+          setScannerIniciado(true);
+        }
       }
     } catch (err) {
       console.error("Error al iniciar scanner:", err);
-      alert("Error al iniciar la cámara. Por favor, verifica los permisos.");
+      alert(`Error al iniciar la cámara: ${err.message}\n\nVerifica que hayas dado permisos de cámara.`);
     }
   };
 
@@ -209,30 +231,34 @@ function Scanner() {
   }
 
   return (
-    <div style={{padding: '2rem', maxWidth: '800px', margin: '0 auto', background: '#f4f4f4', minHeight: '100vh'}}>
+    <div style={{padding: 'clamp(0.5rem, 3vw, 2rem)', maxWidth: '800px', margin: '0 auto', background: '#f4f4f4', minHeight: '100vh'}}>
       
       {/* HEADER */}
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', background: 'white', padding: '1.5rem', borderRadius: '4px', boxShadow: '0 1px 3px rgba(0,0,0,0.12)'}}>
-        <div>
-          <h1 style={{margin: 0, fontSize: '2rem', fontWeight: '400', color: '#161616'}}>Scanner QR</h1>
-          <p style={{margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#525252'}}>Control de Inventario</p>
-        </div>
-        <div style={{display: 'flex', gap: '0.5rem'}}>
-          <Button 
-            kind="tertiary" 
-            renderIcon={Dashboard}
-            onClick={() => navigate('/dashboard')}
-          >
-            Admin
-          </Button>
-          
-          <Button 
-            kind="danger--tertiary" 
-            renderIcon={Logout}
-            onClick={async () => { await supabase.auth.signOut(); navigate('/') }}
-          >
-            Salir
-          </Button>
+      <div style={{display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem', background: 'white', padding: '1rem', borderRadius: '4px', boxShadow: '0 1px 3px rgba(0,0,0,0.12)'}}>
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem'}}>
+          <div>
+            <h1 style={{margin: 0, fontSize: 'clamp(1.25rem, 5vw, 2rem)', fontWeight: '400', color: '#161616'}}>Scanner QR</h1>
+            <p style={{margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: '#525252'}}>Control de Inventario</p>
+          </div>
+          <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+            <Button 
+              kind="tertiary" 
+              size="sm"
+              renderIcon={Dashboard}
+              onClick={() => navigate('/dashboard')}
+            >
+              <span style={{display: window.innerWidth < 600 ? 'none' : 'inline'}}>Admin</span>
+            </Button>
+            
+            <Button 
+              kind="danger--tertiary" 
+              size="sm"
+              renderIcon={Logout}
+              onClick={async () => { await supabase.auth.signOut(); navigate('/') }}
+            >
+              <span style={{display: window.innerWidth < 600 ? 'none' : 'inline'}}>Salir</span>
+            </Button>
+          </div>
         </div>
       </div>
       
@@ -263,8 +289,8 @@ function Scanner() {
       </Tile>
 
       {/* CÁMARA */}
-      <Tile style={{marginBottom: '1.5rem', padding: '1.5rem'}}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <Tile style={{marginBottom: '1.5rem', padding: '1rem'}}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h4 style={{margin: '0', fontSize: '1rem', fontWeight: '600', color: '#161616'}}>Escáner QR</h4>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {!scannerIniciado ? (
@@ -273,7 +299,7 @@ function Scanner() {
                 size="sm"
                 onClick={iniciarScanner}
               >
-                📹 Iniciar Cámara
+                📹 Iniciar
               </Button>
             ) : (
               <Button 
@@ -286,9 +312,25 @@ function Scanner() {
             )}
           </div>
         </div>
-        <div id="reader" style={{borderRadius: '4px', overflow: 'hidden', border: '1px solid #e0e0e0', minHeight: scannerIniciado ? '0' : '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: scannerIniciado ? 'transparent' : '#f4f4f4'}}>
+        <div 
+          id="reader" 
+          style={{
+            borderRadius: '4px', 
+            overflow: 'hidden', 
+            border: '1px solid #e0e0e0', 
+            minHeight: scannerIniciado ? '300px' : '200px',
+            maxHeight: '500px',
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            background: scannerIniciado ? '#000' : '#f4f4f4',
+            position: 'relative'
+          }}
+        >
           {!scannerIniciado && (
-            <p style={{ color: '#525252', fontSize: '0.875rem' }}>Presiona "Iniciar Cámara" para comenzar</p>
+            <p style={{ color: '#525252', fontSize: '0.875rem', textAlign: 'center', padding: '1rem' }}>
+              Presiona "Iniciar" para activar la cámara
+            </p>
           )}
         </div>
       </Tile>
