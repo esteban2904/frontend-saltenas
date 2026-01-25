@@ -201,17 +201,19 @@ function Dashboard() {
               size="sm"
               renderIcon={QrCode}
               onClick={() => navigate('/scanner')}
-            >
-              <span style={{display: window.innerWidth < 600 ? 'none' : 'inline'}}>Scanner</span>
-            </Button>
+              hasIconOnly
+              iconDescription="Scanner"
+              tooltipPosition="bottom"
+            />
             <Button 
               kind="danger--tertiary" 
               size="sm"
               renderIcon={Logout}
               onClick={async () => { await supabase.auth.signOut(); navigate('/') }}
-            >
-              <span style={{display: window.innerWidth < 600 ? 'none' : 'inline'}}>Salir</span>
-            </Button>
+              hasIconOnly
+              iconDescription="Salir"
+              tooltipPosition="bottom"
+            />
           </div>
         </div>
       </div>

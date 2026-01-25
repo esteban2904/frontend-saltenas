@@ -246,18 +246,20 @@ function Scanner() {
               size="sm"
               renderIcon={Dashboard}
               onClick={() => navigate('/dashboard')}
-            >
-              <span style={{display: window.innerWidth < 600 ? 'none' : 'inline'}}>Admin</span>
-            </Button>
+              hasIconOnly
+              iconDescription="Admin"
+              tooltipPosition="bottom"
+            />
             
             <Button 
               kind="danger--tertiary" 
               size="sm"
               renderIcon={Logout}
               onClick={async () => { await supabase.auth.signOut(); navigate('/') }}
-            >
-              <span style={{display: window.innerWidth < 600 ? 'none' : 'inline'}}>Salir</span>
-            </Button>
+              hasIconOnly
+              iconDescription="Salir"
+              tooltipPosition="bottom"
+            />
           </div>
         </div>
       </div>
