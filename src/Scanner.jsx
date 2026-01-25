@@ -67,6 +67,11 @@ function Scanner() {
         // Errores de escaneo (ignorar - son muy frecuentes)
       };
       
+      // IMPORTANTE: Actualizar estados ANTES de iniciar el scanner
+      // para evitar re-renders mientras se inicia
+      setScannerIniciado(true);
+      setHtml5QrCode(qrCode);
+      
       // Primero obtener todas las cámaras disponibles
       let devices = [];
       try {
@@ -87,12 +92,14 @@ function Scanner() {
             onScanError
           );
           
-          setHtml5QrCode(qrCode);
-          setScannerIniciado(true);
           console.log("✅ Scanner iniciado con facingMode");
           return;
         } catch (facingModeError) {
           console.log("⚠️ FacingMode falló:", facingModeError.message);
+          // Revertir estados si falla
+          setScannerIniciado(false);
+          setHtml5QrCode(null);
+          throw facingModeError;
         }
       }
       
@@ -126,18 +133,19 @@ function Scanner() {
           onScanError
         );
         
-        setHtml5QrCode(qrCode);
-        setScannerIniciado(true);
         console.log("✅ Scanner iniciado con deviceId");
         return;
       }
       
       // Si llegamos aquí, no hay cámaras
+      setScannerIniciado(false);
+      setHtml5QrCode(null);
       throw new Error("No se encontraron cámaras disponibles en el dispositivo");
       
     } catch (err) {
       console.error("❌ Error al iniciar scanner:", err);
       setScannerIniciado(false);
+      setHtml5QrCode(null);
       
       let mensaje = "Error al iniciar la cámara.\n\n";
       
