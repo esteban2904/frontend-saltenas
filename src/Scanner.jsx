@@ -235,10 +235,13 @@ function Scanner() {
       })
       
       const accion = modo === "VENTA" ? "Salida" : "Entrada";
-      alert(`✅ ${accion} registrada:\n${unidadTexto} de ${productoEscaneado.nombre}\n(${Math.abs(unidadesTotales)} unidades)`)
       
+      // Cerrar modal ANTES del alert para que se vea inmediatamente
       cerrarModal()
-      obtenerInventario() 
+      obtenerInventario()
+      
+      // Mostrar mensaje de éxito después
+      alert(`✅ ${accion} registrada:\n${unidadTexto} de ${productoEscaneado.nombre}\n(${Math.abs(unidadesTotales)} unidades)`)
     } catch (error) {
       alert("❌ Error de red o servidor.")
       setProcesando(false)
