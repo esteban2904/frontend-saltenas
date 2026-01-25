@@ -61,20 +61,16 @@ function Scanner() {
     if (!html5QrCode || scannerIniciado) return;
     
     try {
-      // Configuración para usar facingMode (mejor compatibilidad móvil)
+      // Configuración básica
       const config = {
         fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0,
-        videoConstraints: {
-          facingMode: { ideal: "environment" } // Cámara trasera
-        }
+        qrbox: { width: 250, height: 250 }
       };
       
       // Intentar iniciar con facingMode primero (mejor para móviles)
       try {
         await html5QrCode.start(
-          { facingMode: "environment" },
+          { facingMode: "environment" }, // Cámara trasera
           config,
           (decodedText) => {
             // Detener scanner y procesar QR
@@ -87,9 +83,10 @@ function Scanner() {
         );
         
         setScannerIniciado(true);
+        console.log("✅ Scanner iniciado con facingMode");
       } catch (facingModeError) {
         // Si facingMode falla, intentar con deviceId (escritorio)
-        console.log("FacingMode no soportado, intentando con deviceId...");
+        console.log("⚠️ FacingMode falló, intentando con deviceId...", facingModeError);
         
         const devices = await Html5Qrcode.getCameras();
         
@@ -123,10 +120,14 @@ function Scanner() {
           );
           
           setScannerIniciado(true);
+          console.log("✅ Scanner iniciado con deviceId:", camaraId);
+        } else {
+          throw new Error("No se encontraron cámaras disponibles");
         }
       }
     } catch (err) {
-      console.error("Error al iniciar scanner:", err);
+      console.error("❌ Error al iniciar scanner:", err);
+      setScannerIniciado(false);
       alert(`Error al iniciar la cámara: ${err.message}\n\nVerifica que hayas dado permisos de cámara.`);
     }
   };
