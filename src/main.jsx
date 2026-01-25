@@ -2,6 +2,9 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 
+// Importamos IBM Carbon Design System
+import '@carbon/styles/css/styles.css'
+
 // Importamos tus 3 pantallas
 import Login from './Login.jsx'
 import Scanner from './Scanner.jsx'

@@ -3,6 +3,24 @@ import axios from 'axios'
 import { supabase } from './supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts'
+import { 
+  Button, 
+  DataTable, 
+  TableContainer, 
+  Table, 
+  TableHead, 
+  TableRow, 
+  TableHeader, 
+  TableBody, 
+  TableCell,
+  TextInput,
+  NumberInput,
+  Modal,
+  Tile,
+  Grid,
+  Column
+} from '@carbon/react'
+import { Logout, QrCode, Add, TrashCan } from '@carbon/icons-react'
 
 // Colores para diferenciar Entrada (Verdes/Azules) y Salida (Rojos/Naranjas)
 const COLORES_ENTRADA = ['#10b981', '#059669', '#0088fe', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#06b6d4'];
@@ -168,45 +186,66 @@ function Dashboard() {
   const alturaMensual = Math.max(350, keysEntrada.length * 35 + keysSalida.length * 35);
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto', fontFamily: 'Arial, sans-serif', background: '#f5f7fa', minHeight: '100vh' }}>
+    <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', background: '#f4f4f4', minHeight: '100vh' }}>
       
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', background: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.08)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', background: 'white', padding: '1.5rem', borderRadius: '4px', boxShadow: '0 1px 3px rgba(0,0,0,0.12)' }}>
         <div>
-          <h1 style={{margin: 0, color: '#1e293b', fontSize: '28px'}}>📊 Dashboard Maestro</h1>
-          <p style={{margin: '5px 0 0 0', color: '#64748b', fontSize: '14px'}}>Control de Inventario en Tiempo Real</p>
+          <h1 style={{margin: 0, color: '#161616', fontSize: '2rem', fontWeight: '400'}}>Dashboard Maestro</h1>
+          <p style={{margin: '0.5rem 0 0 0', color: '#525252', fontSize: '0.875rem'}}>Control de Inventario en Tiempo Real</p>
         </div>
-        <button onClick={async () => { await supabase.auth.signOut(); navigate('/') }} style={{background: '#1e293b', color:'white', padding:'12px 24px', border:'none', borderRadius:'8px', cursor:'pointer', fontSize:'14px', fontWeight:'600', transition: 'all 0.2s', boxShadow: '0 2px 5px rgba(0,0,0,0.1)'}}>
-          🚪 Cerrar Sesión
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Button 
+            kind="tertiary" 
+            renderIcon={QrCode}
+            onClick={() => navigate('/scanner')}
+          >
+            Ir al Scanner
+          </Button>
+          <Button 
+            kind="danger--tertiary" 
+            renderIcon={Logout}
+            onClick={async () => { await supabase.auth.signOut(); navigate('/') }}
+          >
+            Cerrar Sesión
+          </Button>
+        </div>
       </div>
 
       {/* TARJETAS DE ESTADÍSTICAS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px', marginBottom: '25px' }}>
-        <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '20px', borderRadius: '12px', color: 'white', boxShadow: '0 4px 15px rgba(102,126,234,0.4)' }}>
-          <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>📦 Stock Total</div>
-          <div style={{ fontSize: '32px', fontWeight: 'bold' }}>{stats.totalStock}</div>
-          <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '5px' }}>unidades totales</div>
-        </div>
+      <Grid narrow style={{ marginBottom: '2rem' }}>
+        <Column lg={4} md={4} sm={4}>
+          <Tile style={{ background: '#0f62fe', color: 'white', padding: '1.5rem', minHeight: '140px' }}>
+            <div style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: '0.5rem' }}>Stock Total</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: '300', marginBottom: '0.5rem' }}>{stats.totalStock}</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>unidades totales</div>
+          </Tile>
+        </Column>
         
-        <div style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', padding: '20px', borderRadius: '12px', color: 'white', boxShadow: '0 4px 15px rgba(245,87,108,0.4)' }}>
-          <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>⚠️ Alertas Bajas</div>
-          <div style={{ fontSize: '32px', fontWeight: 'bold' }}>{stats.productosAlerta}</div>
-          <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '5px' }}>productos bajo mínimo</div>
-        </div>
+        <Column lg={4} md={4} sm={4}>
+          <Tile style={{ background: '#da1e28', color: 'white', padding: '1.5rem', minHeight: '140px' }}>
+            <div style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: '0.5rem' }}>Alertas Bajas</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: '300', marginBottom: '0.5rem' }}>{stats.productosAlerta}</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>productos bajo mínimo</div>
+          </Tile>
+        </Column>
         
-        <div style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', padding: '20px', borderRadius: '12px', color: 'white', boxShadow: '0 4px 15px rgba(79,172,254,0.4)' }}>
-          <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>📊 Promedio Stock</div>
-          <div style={{ fontSize: '32px', fontWeight: 'bold' }}>{stats.stockPromedio}</div>
-          <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '5px' }}>unidades por producto</div>
-        </div>
+        <Column lg={4} md={4} sm={4}>
+          <Tile style={{ background: '#24a148', color: 'white', padding: '1.5rem', minHeight: '140px' }}>
+            <div style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: '0.5rem' }}>Promedio Stock</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: '300', marginBottom: '0.5rem' }}>{stats.stockPromedio}</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>unidades por producto</div>
+          </Tile>
+        </Column>
         
-        <div style={{ background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', padding: '20px', borderRadius: '12px', color: 'white', boxShadow: '0 4px 15px rgba(250,112,154,0.4)' }}>
-          <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>🍱 Total Sabores</div>
-          <div style={{ fontSize: '32px', fontWeight: 'bold' }}>{productos.length}</div>
-          <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '5px' }}>productos registrados</div>
-        </div>
-      </div>
+        <Column lg={4} md={4} sm={4}>
+          <Tile style={{ background: '#8a3ffc', color: 'white', padding: '1.5rem', minHeight: '140px' }}>
+            <div style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: '0.5rem' }}>Total Sabores</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: '300', marginBottom: '0.5rem' }}>{productos.length}</div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>productos registrados</div>
+          </Tile>
+        </Column>
+      </Grid>
 
       {/* --- GRÁFICA 1: REPORTE DIARIO --- */}
       <div style={{ background: '#fff', padding: '25px', borderRadius: '12px', marginBottom: '25px', boxShadow: '0 2px 10px rgba(0,0,0,0.08)' }}>
